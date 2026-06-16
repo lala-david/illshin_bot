@@ -174,27 +174,30 @@ class Music(commands.Cog):
     async def join(self, i: discord.Interaction):
         if not i.user.voice:
             return await i.response.send_message("❌ 음성 채널에 먼저 입장하세요!", ephemeral=True)
+        await i.response.defer()
         ch = i.user.voice.channel
-        if i.guild.voice_client:
-            await i.guild.voice_client.move_to(ch)
-        else:
-            await ch.connect()
-        await i.response.send_message(f"🔊 **{ch.name}** 입장!")
+        try:
+            if i.guild.voice_client:
+                await i.guild.voice_client.move_to(ch)
+            else:
+                await ch.connect(timeout=20.0, reconnect=True)
+        except Exception as e:
+            return await i.followup.send(f"❌ 입장 실패: {e}")
+        await i.followup.send(f"🔊 **{ch.name}** 입장!")
 
     @app_commands.command(name="퇴장", description="음성 채널 퇴장")
     async def leave(self, i: discord.Interaction):
         if not i.guild.voice_client:
             return await i.response.send_message("❌ 봇이 채널에 없습니다!", ephemeral=True)
+        await i.response.defer()
         await self._cleanup(i.guild)
-        await i.response.send_message("👋 퇴장!")
+        await i.followup.send("👋 퇴장!")
 
     @app_commands.command(name="재생", description="음악 재생 (재생목록 URL도 가능)")
     @app_commands.describe(url="유튜브 URL, 재생목록 URL 또는 검색어")
     async def play(self, i: discord.Interaction, url: str):
         if not i.user.voice:
             return await i.response.send_message("❌ 음성 채널에 먼저 입장하세요!", ephemeral=True)
-        if not i.guild.voice_client:
-            await i.user.voice.channel.connect()
 
         # 순수 재생목록 URL인지 확인 (/playlist?list=... 형식만)
         is_playlist = "/playlist" in url and "list=" in url
@@ -212,6 +215,14 @@ class Music(commands.Cog):
             msg = await i.original_response()
         else:
             await i.response.defer()
+
+        if not i.guild.voice_client:
+            try:
+                await i.user.voice.channel.connect(timeout=20.0, reconnect=True)
+            except Exception as e:
+                if is_playlist:
+                    return await msg.edit(content=f"❌ 음성 연결 실패: {e}")
+                return await i.followup.send(f"❌ 음성 연결 실패: {e}")
 
         songs, err = await self._get_songs(url, i.user)
         if err:
