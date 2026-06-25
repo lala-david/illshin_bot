@@ -18,6 +18,12 @@ YTDL_OPTIONS = {
     "default_search": "auto",
     "source_address": "0.0.0.0",
     "extract_flat": False,
+    # 데이터센터 IP에서 YouTube 403 우회를 위해 여러 클라이언트 시도
+    "extractor_args": {
+        "youtube": {
+            "player_client": ["tv_embedded", "mweb", "web_safari", "android_vr"],
+        }
+    },
 }
 
 FFMPEG_OPTIONS = {
