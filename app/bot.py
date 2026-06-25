@@ -9,11 +9,14 @@ if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-# Windows에서는 discord.py 번들 opus를 명시적으로 로드해야 음성 송출이 됨
+# opus 로드: Windows는 discord.py 번들 DLL, Linux는 시스템 라이브러리(libopus.so)
 if not discord.opus.is_loaded():
     try:
-        opus_path = os.path.join(os.path.dirname(discord.__file__), "bin", "libopus-0.x64.dll")
-        discord.opus.load_opus(opus_path)
+        if sys.platform == "win32":
+            opus_path = os.path.join(os.path.dirname(discord.__file__), "bin", "libopus-0.x64.dll")
+            discord.opus.load_opus(opus_path)
+        else:
+            discord.opus.load_opus("libopus.so.0")
         print(f"[OK] opus 로드: {discord.opus.is_loaded()}")
     except Exception as e:
         print(f"[ERROR] opus 로드 실패: {e}")
